@@ -35,7 +35,7 @@ suggestedEntryPrice = 0
 currentTrades = {}
 
 tradeSignalGroupName = 'Support Signals (Platinum Batch 5)'
-tradeStatusGroupName = 'Dharamik Signals Prod'
+tradeStatusGroupName = 'Dharamik Signals Live'
 
 messageFilter = ['Buy', 'Target']
 stockFilter = ['BankNifty', 'Nifty', '#BankNifty', '#Nifty']
@@ -73,9 +73,9 @@ def main():
 
                 tradeStatusUpdateMessage = newMessage + '\n \n' + 'Signal Details: ' + '\n \n '
 
-                signalDetails = orderRequest.stock_name + " -- " + orderRequest.transaction_type + " -- " + str(orderRequest.stop_loss)
+                signalDetails = orderRequest.stock_name + " , " + orderRequest.transaction_type + " , Signal Entry Price - " + str(orderRequest.executedPrice) + " , SL - " + str(orderRequest.stop_loss)
 
-                await sendMessagetoTelegram(signalDetails)
+                await sendMessagetoTelegram(tradeStatusUpdateMessage + signalDetails)
                 #---- Send the order for execution to the broker
 
                 orderExecutedSuccessfully = True
@@ -91,6 +91,9 @@ def main():
                     currentMessage = event.message.message
 
                     print('\n')
+                    print('-----------------------------------------------------------------------------------')
+                    print('\n')
+                    print('\n')
                     print('Current Message:')
                     print(currentMessage)
 
@@ -105,8 +108,8 @@ def main():
                         previousmessage = previousMessageObj.message
                         
                         print('\n')
-                        print('Replied to Message:')
-                        print(previousmessage)
+                        # print('Replied to Message:')
+                        # print(previousmessage)
 
                         if(filtermessage(previousmessage)):
                             if(containsStopLoss(currentMessage) & len(currentTrades)> 0):
@@ -122,8 +125,16 @@ def main():
         order = await processTradeSignalMessage(message)
         return order
         
+    def EvaluateStopLossPrice(stoploss, currentTrade):
+        tradeEntryPrice = currentTrade.executedPrice
+
+        if(stoploss < 0.3 * tradeEntryPrice):
+            stoploss = tradeEntryPrice - stoploss
+        
+        return stoploss
 
     async def UpdateStopLoss(currentMessage, previousmessage = ''):
+        initialStoploss = 0
         stoploss = 0
         if(previousmessage != ''):
 
@@ -132,36 +143,41 @@ def main():
             stockName = order.stock_name
 
             currentTrade = currentTrades[stockName]
+            initialStoploss = currentTrade.stop_loss
 
             if(currentTrade):
                 stoplossPrices = re.findall(r'[0-9]+', currentMessage)
 
                 if(len(stoplossPrices) > 0):
                     stoploss = int(stoplossPrices[0])
-                elif (currentMessage.lower().find('CTC'.lower()) != -1 | currentMessage.find('Cost to Cost'.lower())):
+                    stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
+                elif (currentMessage.lower().find('CTC'.lower()) != -1 or currentMessage.find('Cost to Cost'.lower()) != -1):
                     stoploss = order.executedPrice
                 else:
-                    stoploss = order.stop_loss
+                    stoploss = initialStoploss
 
                 currentTrade.stop_loss = stoploss
         
         else:
             if(len(currentTrades) > 1):
+                printCurrentTrades()
                 return
             else:
                 key = list(currentTrades.keys())[0]
                 currentTrade = currentTrades[key]
                 stoplossPrices = re.findall(r'[0-9]+', currentMessage)
+                initialStoploss = currentTrade.stop_loss
 
                 if(len(stoplossPrices) > 0):
                     stoploss = int(stoplossPrices[0])
-                elif (currentMessage.lower().find('CTC'.lower()) != -1 | currentMessage.find('Cost to Cost'.lower())):
+                    stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
+                elif (currentMessage.lower().find('CTC'.lower()) != -1 or currentMessage.find('Cost to Cost'.lower()) != -1):
                     stoploss = currentTrade.executedPrice
                 else:
-                    stoploss = currentTrade.stop_loss
+                    stoploss = initialStoploss
 
                 currentTrade.stop_loss = stoploss
-
+                await sendMessagetoTelegram('StopLoss Modified from ' + str(initialStoploss) + ' to ' + str(stoploss) + 'for ' + currentTrade.stock_name)
         
 
         if(currentTrade):
@@ -202,6 +218,8 @@ def main():
         return stoploss
 
     async def sendMessagetoTelegram(tradeStatusUpdateMessage):
+
+        await client.get_dialogs()
 
         tradeStatusGroupEntity= await client.get_entity(tradeStatusGroupName)
 
@@ -277,11 +295,15 @@ def main():
         print(tradeSignal)
 
         stoploss = getStoploss(trademessage)
+        
 
         if(stoploss == 0):
-            stoploss = 50
+            stoploss = suggestedEntryPrice - 50
 
-        orderRequest = OrderExecution.OrderExecutionRequest(stockName, stockSymbol, transactionType, stoploss)
+        orderRequest = OrderExecution.OrderExecutionRequest(stockName, stockSymbol, transactionType, stoploss, suggestedEntryPrice)
+
+        stoploss = EvaluateStopLossPrice(stoploss, orderRequest)
+        orderRequest.stop_loss = stoploss
 
         return orderRequest
         
