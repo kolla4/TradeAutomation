@@ -73,7 +73,7 @@ def main():
 
                 tradeStatusUpdateMessage = newMessage + '\n \n' + 'Signal Details: ' + '\n \n '
 
-                signalDetails = orderRequest.stock_name + " , " + orderRequest.transaction_type + " , Signal Entry Price - " + str(orderRequest.executedPrice) + " , SL - " + str(orderRequest.stop_loss)
+                signalDetails = orderRequest.stock_name + " , " + orderRequest.transaction_type + " , Signal Entry Price - " + str(orderRequest.executedPrice) + " , SL - " + str(orderRequest.stop_loss) + ' Order Type - ' + orderRequest.order_type
 
                 await sendMessagetoTelegram(tradeStatusUpdateMessage + signalDetails)
                 #---- Send the order for execution to the broker
@@ -242,9 +242,11 @@ def main():
 
     # --------------------- Processing the message to extract the key attributes to be sent to the trading broker ---------
     async def processTradeSignalMessage(trademessage):
-
+        orderType_market = 'MarketOrder'
+        orderType_limit = 'LimitOrder'
         stoploss = 0
         suggestedEntryPrice = 0        
+        orderType = orderType_market
 
         if trademessage.find(BANK_NIFTY) != -1:
             stockType = BANK_NIFTY
@@ -259,8 +261,18 @@ def main():
         splitstrings = trademessage.split()
         
         #suggestedEntryPrice = int(re.search(r'\d+', re.search('Buy At (.*) For', trademessage).group(1)).group())
+
+        print(trademessage)
+        s = trademessage.lower().find(('Buy Above').lower())
+        
+        print (s)
+
+        if(trademessage.lower().find(('Buy Above').lower()) > -1):
+            orderType = orderType_limit
+
+        print(orderType)
         try:
-            suggestedEntryPrice = int(re.search(r'\d+', re.search('Buy At (.*) For', trademessage).group(1)).group())
+            suggestedEntryPrice = int(re.search(r'\d+', re.search('Buy (.*) For', trademessage).group(1)).group())
         except:
             print("This trade signal doesn't have entry price - it might be an opening trade")
 
@@ -300,7 +312,7 @@ def main():
         if(stoploss == 0):
             stoploss = suggestedEntryPrice - 50
 
-        orderRequest = OrderExecution.OrderExecutionRequest(stockName, stockSymbol, transactionType, stoploss, suggestedEntryPrice)
+        orderRequest = OrderExecution.OrderExecutionRequest(stockName, stockSymbol, transactionType, stoploss, suggestedEntryPrice, orderType)
 
         stoploss = EvaluateStopLossPrice(stoploss, orderRequest)
         orderRequest.stop_loss = stoploss
