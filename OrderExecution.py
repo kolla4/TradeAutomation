@@ -1,6 +1,8 @@
+import FyersRequest
+
 class OrderExecutionRequest:
 
-    def __init__(self, stock_name, stock_symbol, transaction_type, stop_loss, executedPrice = 0, order_type = 'Market Order', target_price = 0):
+    def __init__(self, stock_name, stock_symbol, transaction_type, stop_loss, executedPrice = 0, order_type = 'MarketOrder', target_price = 0):
         self.stock_name = stock_name
         self.stock_symbol = stock_symbol
         self.transaction_type = transaction_type
@@ -8,3 +10,25 @@ class OrderExecutionRequest:
         self.stop_loss = stop_loss
         self.target_price = target_price
         self.executedPrice = executedPrice
+
+    def MapOrderToFyersRequest():
+        qty = 1
+        side = 1
+        marketType = 2
+        limitPrice = 0
+
+        if(self.order_type.lower() == 'Market Order'.lower()):
+            marketType = 2
+        elif(self.order_type.lower() == 'LimitOrder'.lower()):
+            marketType = 1
+        
+        if(self.transaction_type.lower() == 'Buy'.lower()):
+            side = 1
+        else:
+            side = -1
+
+        if(marketType == 1):
+            limitPrice = self.executedPrice
+                
+
+        return FyersRequest.FyersRequestModel(self.stock_symbol, qty, marketType, side, 'INTRADAY', limitPrice, offlineOrder=False, stopLoss= self.stop_loss, takeProfit=self.target_price)

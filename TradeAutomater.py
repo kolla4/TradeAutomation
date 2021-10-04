@@ -14,6 +14,7 @@ from telethon import TelegramClient, events, utils
 import re
 import sys
 import OrderExecution
+import FyersRequest
 
 api_id = 8289565
 api_hash = '7e958c4c4ea8f0cea7485196733ca4ad'
@@ -76,6 +77,8 @@ def main():
                 signalDetails = orderRequest.stock_name + " , " + orderRequest.transaction_type + " , Signal Entry Price - " + str(orderRequest.executedPrice) + " , SL - " + str(orderRequest.stop_loss) + ' Order Type - ' + orderRequest.order_type
 
                 await sendMessagetoTelegram(tradeStatusUpdateMessage + signalDetails)
+
+                
                 #---- Send the order for execution to the broker
 
                 orderExecutedSuccessfully = True
@@ -316,6 +319,10 @@ def main():
 
         stoploss = EvaluateStopLossPrice(stoploss, orderRequest)
         orderRequest.stop_loss = stoploss
+
+        fyersRequest = orderRequest.MapOrderToFyersRequest()
+
+        print(fyersRequest)
 
         return orderRequest
         
