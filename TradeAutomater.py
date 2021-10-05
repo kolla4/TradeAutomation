@@ -13,8 +13,28 @@ from os import environ
 from telethon import TelegramClient, events, utils
 import re
 import sys
+import json
 import OrderExecution
 import FyersRequest
+
+from fyers_api import fyersModel
+from fyers_api import accessToken
+import requests
+
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait 
+from selenium.webdriver.support import expected_conditions as EC
+
+################    FYERS CREDENTIALS ##########################
+
+#access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2MzMzNzk0OTEsImV4cCI6MTYzMzM5MzgzMSwibmJmIjoxNjMzMzc5NDkxLCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCaFcyU2pZQ242bEQ0bkxaQTBhM0xwNmNsbXkwTDdOaG83WFF4eTB5YWRwZnFjd1NFVGRoR0dGRG1CU3ZuZDBFMC1JX1otdGxZOWUwVmN1MVRMSE9HX0hQbl9BVmtLU25vNGlJSEVpZjVSVDFkSFFjcz0iLCJkaXNwbGF5X25hbWUiOiJSQUhVTCBWQVJNQSIsImZ5X2lkIjoiWFIxMTYwMiIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.Hw6AI21hmxNA57_1xonAQZ8llKrTmm1fMfMqmH4WMx8'
+
+client_id = '9BPNFGJHZ5-100'
+secret_key = 'LJCTDO2WQY'
+redirect_url = 'https://tradepop.com/TradeDhar/api-login'
+
 
 api_id = 8289565
 api_hash = '7e958c4c4ea8f0cea7485196733ca4ad'
@@ -47,6 +67,12 @@ weeklyExpiryMonth = {"JAN": "1", "FEB": "2", "MAR": "3", "APR": "4", "MAY": "5",
 def main():
     # session_name = environ.get('TG_SESSION', 'session')
     client = TelegramClient(username, api_id, api_hash)
+
+    fyers_app_id = "9BPNFGJHZ5-100"
+
+    access_token = request_auth()
+    
+    fyers = fyersModel.FyersModel(client_id=fyers_app_id, token=access_token)
     
     @client.on(events.NewMessage)
     async def my_handler(event):
@@ -76,10 +102,29 @@ def main():
 
                 signalDetails = orderRequest.stock_name + " , " + orderRequest.transaction_type + " , Signal Entry Price - " + str(orderRequest.executedPrice) + " , SL - " + str(orderRequest.stop_loss) + ' Order Type - ' + orderRequest.order_type
 
+
+
                 await sendMessagetoTelegram(tradeStatusUpdateMessage + signalDetails)
 
+                #------- Sending order to Fyers
+
+                fyersRequest = MapOrderToFyersRequest(orderRequest)
+
+                fyersdatarequest = fyersRequest.toJSON()
+
+                print(fyersdatarequest)
+
+                orderresponse = fyers.place_order(fyersdatarequest)
+                print(orderresponse)
+
+                if('error'.lower() in orderresponse.get('s')):
+                    print('error_code + ' + str(orderresponse.get('code')))
+                    print('error_msg ' + orderresponse.get('message'))
+
+                else:
+                    print('order placed successfully')
                 
-                #---- Send the order for execution to the broker
+                
 
                 orderExecutedSuccessfully = True
 
@@ -266,10 +311,7 @@ def main():
         #suggestedEntryPrice = int(re.search(r'\d+', re.search('Buy At (.*) For', trademessage).group(1)).group())
 
         print(trademessage)
-        s = trademessage.lower().find(('Buy Above').lower())
         
-        print (s)
-
         if(trademessage.lower().find(('Buy Above').lower()) > -1):
             orderType = orderType_limit
 
@@ -291,7 +333,7 @@ def main():
             if(len(date) < 2):
                 date = '0' + date
             stockName = date + " " + splitstrings[2].upper() + " " + optionStrikePrice + " " + optionType.upper()
-            stockSymbol = stockType.upper() + '20' + month + date.rstrip(date[-2:]) + optionStrikePrice + optionType.upper()
+            stockSymbol = stockType.upper() + '21' + month + date.rstrip(date[-2:]) + optionStrikePrice + optionType.upper()
 
             #print(stockSymbol)
         else:
@@ -301,7 +343,7 @@ def main():
             optionType = splitstrings[3]
             
             stockName = month.upper() + " " + optionStrikePrice + " " + optionType.upper()
-            stockSymbol = stockType.upper() + '20' + month.upper() + optionStrikePrice + optionType.upper()
+            stockSymbol = stockType.upper() + '21' + month.upper() + optionStrikePrice + optionType.upper()
             #print(stockSymbol)
 
         
@@ -320,10 +362,6 @@ def main():
         stoploss = EvaluateStopLossPrice(stoploss, orderRequest)
         orderRequest.stop_loss = stoploss
 
-        fyersRequest = orderRequest.MapOrderToFyersRequest()
-
-        print(fyersRequest)
-
         return orderRequest
         
 
@@ -335,10 +373,91 @@ def main():
 
     client.run_until_disconnected()
 
-
 # def update_handler(update):
 #     print(update)
 
+def request_auth():
+
+    options = Options()
+    options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    driver = webdriver.Chrome(executable_path=r"C:\chromedriver_win32\chromedriver.exe", chrome_options = options)
+
+    # Authentication
+    app_id = "9BPNFGJHZ5-100"
+    app_secret = "LJCTDO2WQY"
+    session=accessToken.SessionModel(client_id=app_id, secret_key=app_secret, redirect_uri=redirect_url, response_type='code', grant_type='authorization_code')
+    #app_session = accessToken.SessionModel(app_id, app_secret)
+    #response = app_session.auth()
+    response = session.generate_authcode()
+    print('Generate AuthCode response - ' + response)
+
+
+
+    # Getting authorized code into a variable
+    #authorization_code = response['data']['authorization_code']
+
+    # Setting a Session
+    #print(app_session.set_token(authorization_code))
+
+    #access_token_url = app_session.generate_token()
+
+    # Opening Url through Selenium
+    driver.get(str(response))
+
+    usn = driver.find_element_by_id('fyers_id')
+    usn.send_keys('XR11602')
+    time.sleep(2)
+
+    pwd = driver.find_element_by_id('password')
+    pwd.send_keys('Hubble2426!')
+    time.sleep(2)
+
+    driver.find_element_by_class_name('login-span-pan').click()
+    time.sleep(2)
+
+    pan = driver.find_element_by_id('pancard')
+    pan.send_keys('AQCPV3101H')
+    time.sleep(2)
+
+    driver.find_element_by_id('btn_id').click()
+
+
+    WebDriverWait(driver,20).until(EC.title_contains('tradepop'))
+    # getting access token from browser
+    
+    authcode = driver.current_url.split('=', 3)[3].split('&', 1)[0]
+
+    session.set_token(authcode)
+    response = session.generate_token()
+    access_token = response["access_token"]
+ 
+
+   # Quiting the browser
+    driver.quit()
+
+    return access_token
+
+def MapOrderToFyersRequest(orderRequest):
+        qty = 25
+        side = 1
+        marketType = 2
+        limitPrice = 0
+
+        if(orderRequest.order_type.lower() == 'Market Order'.lower()):
+            marketType = 2
+        elif(orderRequest.order_type.lower() == 'LimitOrder'.lower()):
+            marketType = 1
+        
+        if(orderRequest.transaction_type.lower() == 'Buy'.lower()):
+            side = 1
+        else:
+            side = -1
+
+        if(marketType == 1):
+            limitPrice = orderRequest.executedPrice
+                
+
+        return FyersRequest.FyersRequestModel(orderRequest.stock_symbol, qty, marketType, side, 'INTRADAY', limitPrice, offlineOrder=False, stopLoss= orderRequest.stop_loss, takeProfit=orderRequest.target_price)
 
 if __name__ == '__main__':
     userDetails = ''
