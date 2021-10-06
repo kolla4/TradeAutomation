@@ -79,8 +79,8 @@ def main():
 
     print(offlineOrder)
 
-    #access_token = request_auth()
-    access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2MzM1MDEyODEsImV4cCI6MTYzMzU2NjYyMSwibmJmIjoxNjMzNTAxMjgxLCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCaFhVQmh1Tk0wMkE3R1ZVN05uQU81Y0tJOF9MV0xVeVJkbEhDSW5ubTFMeUVtc0U5bFg2V09xQVVyaUVDc1ZiZXNHT0dpSXBkb1JyZjd0MEJaVjd0U1ZLMHlTb2R2aEhBNVM1ZXU4anRPVWE5di1ORT0iLCJkaXNwbGF5X25hbWUiOiJSQUhVTCBWQVJNQSIsImZ5X2lkIjoiWFIxMTYwMiIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.mJE-HYhHJdJRNa4ix3qnv5s-PsnoKWgRvwJ0woQMpu4'
+    access_token = request_auth()
+    #access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2MzM1MDEyODEsImV4cCI6MTYzMzU2NjYyMSwibmJmIjoxNjMzNTAxMjgxLCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCaFhVQmh1Tk0wMkE3R1ZVN05uQU81Y0tJOF9MV0xVeVJkbEhDSW5ubTFMeUVtc0U5bFg2V09xQVVyaUVDc1ZiZXNHT0dpSXBkb1JyZjd0MEJaVjd0U1ZLMHlTb2R2aEhBNVM1ZXU4anRPVWE5di1ORT0iLCJkaXNwbGF5X25hbWUiOiJSQUhVTCBWQVJNQSIsImZ5X2lkIjoiWFIxMTYwMiIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.mJE-HYhHJdJRNa4ix3qnv5s-PsnoKWgRvwJ0woQMpu4'
     print(access_token)
     
     fyers = fyersModel.FyersModel(client_id=fyers_app_id, token=access_token)
@@ -97,9 +97,6 @@ def main():
         orderExecutedSuccessfully = False
 
         if(chat_from.title == tradeSignalGroupName):
-    
-            # print('This is Event.Message Object ----------------------------\n \n')
-            # print(event.message)
 
             isTradeMessage = filtermessage(newMessage)
 
