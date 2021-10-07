@@ -79,8 +79,8 @@ def main():
 
     print(offlineOrder)
 
-    access_token = request_auth()
-    #access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2MzM1MDEyODEsImV4cCI6MTYzMzU2NjYyMSwibmJmIjoxNjMzNTAxMjgxLCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCaFhVQmh1Tk0wMkE3R1ZVN05uQU81Y0tJOF9MV0xVeVJkbEhDSW5ubTFMeUVtc0U5bFg2V09xQVVyaUVDc1ZiZXNHT0dpSXBkb1JyZjd0MEJaVjd0U1ZLMHlTb2R2aEhBNVM1ZXU4anRPVWE5di1ORT0iLCJkaXNwbGF5X25hbWUiOiJSQUhVTCBWQVJNQSIsImZ5X2lkIjoiWFIxMTYwMiIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.mJE-HYhHJdJRNa4ix3qnv5s-PsnoKWgRvwJ0woQMpu4'
+    #access_token = request_auth()
+    access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2MzM1NjY4MjQsImV4cCI6MTYzMzY1MzA0NCwibmJmIjoxNjMzNTY2ODI0LCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCaFhrQm9ERGJrbThsSjZ2S3dZSFZPODFJUVhQU1d5QzRjR1hrcmpUaC02MUJ0bXN6NUdvLVBNSENEM3RFRzFDT2RSZEl3bTV1R09DbC0tamFtd3ZzQmF0QlJfZFdSVW84ZnBNemtMUFlHR0o0Rm5Faz0iLCJkaXNwbGF5X25hbWUiOiJSQUhVTCBWQVJNQSIsImZ5X2lkIjoiWFIxMTYwMiIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.-LAGAvCuoSUsvntwDP25Bb4TAOmPPH6iJS67IqusDBk'
     print(access_token)
     
     fyers = fyersModel.FyersModel(client_id=fyers_app_id, token=access_token)
@@ -276,13 +276,12 @@ def main():
                         print(filtermessage(previousmessage))
                         print(containsStopLoss(currentMessage))
 
-                        if(filtermessage(previousmessage)):
-                            if(containsStopLoss(currentMessage) and len(currentTrades)> 0):
-                                await UpdateStopLoss(currentMessage, previousmessage)
+                        if(filtermessage(previousmessage) and len(currentTrades) > 0):
+                            await UpdateStopLoss(currentTrades, currentMessage, previousmessage)
 
                     else:
-                        if(containsStopLoss(currentMessage) and len(currentTrades)> 0):
-                            await UpdateStopLoss(currentMessage, previousmessage)
+                        if(len(currentTrades) == 1):
+                            await UpdateStopLoss(currentTrades, currentMessage, previousmessage)
 
     
     async def ExtractOrderInfo(message):
@@ -297,218 +296,120 @@ def main():
         
         return stoploss
 
-    async def UpdateStopLoss(currentMessage, previousmessage = ''):
+    async def UpdateStopLoss(currentTrades, currentMessage, previousmessage = ''):
         print('In Update Stoploss Method')
         initialStoploss = 0
         stoploss = 0
-        if(previousmessage != ''):
-
-            stockName = ''
-            order = await ExtractOrderInfo(previousmessage)
-            stockName = order.stock_name
-
-            currentTrade = currentTrades[stockName]
-            initialStoploss = currentTrade.stop_loss
-
-            if(currentTrade):
-                stoplossPrices = re.findall(r'[0-9]+', currentMessage)
-
-                if (currentMessage.lower().find('CTC'.lower()) != -1 or currentMessage.find('Cost to Cost'.lower()) != -1):
-                    stoploss = order.executedPrice
-                elif(len(stoplossPrices) > 1):
-                    stoploss = int(stoplossPrices[1])
-                    stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
-                elif(len(stoplossPrices) > 0):
-                    stoploss = int(stoplossPrices[0])
-                    stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
-                else:
-                    stoploss = initialStoploss
-
-                currentTrade.stop_loss = stoploss
-
-                if(offlineOrder == False):
-                    modifyrequest = ModifyOrderToJsonFyersRequest(currentTrade.order_id, stoploss, stoploss - 2)
-                    print(modifyrequest)
-                else:
-                    modifyrequest = ModifyOrderToJsonFyersRequest(currentTrade.order_id, limitPrice = stoploss)
-
-
-                #print("Modify Request")
-                #print(modifyrequest)
-                cancelData = {"id":currentTrade.order_id}
-                cancelOrderResponse = fyers.cancel_order(cancelData)
-
-                if('error'.lower() in cancelOrderResponse.get('s')):
-                        print('error_code + ' + str(cancelOrderResponse.get('code')))
-                        print('error_msg ' + cancelOrderResponse.get('message'))
-                        ErrorMessage = 'Cancel Order Response error_code is :' + str(cancelOrderResponse.get('code')) + '   and   ' + 'error message is : ' + cancelOrderResponse.get('message')
-                        await sendMessagetoTelegram(ErrorMessage)
-
-                else:
-                    print('Existing Stoploss order cancelled successfully')
-                    newStoplossRequest =  {
-                          "symbol": currentTrade.stock_symbol,
-                          "qty":25,
-                          "type":4,
-                          "side":-1,
-                          "productType":'INTRADAY',
-                          "limitPrice":stoploss - 2,
-                          "stopPrice":stoploss,
-                          "validity":"DAY",
-                          "disclosedQty":0,
-                          "offlineOrder":offlineOrder,
-                          "stopLoss":0,
-                          "takeProfit":0
-                        }
-
-                    newStoplossResponse = fyers.place_order(newStoplossRequest)
-                    stoplossOrderSuccess = False
-
-                    if('error'.lower() in newStoplossResponse.get('s')):
-                        print('error_code + ' + str(newStoplossResponse.get('code')))
-                        print('error_msg ' + newStoplossResponse.get('message'))
-                        ErrorMessage = 'error_code is :' + str(newStoplossResponse.get('code')) + '   and   ' + 'error message is : ' + firstorderresponse.get('message')
-                        await sendMessagetoTelegram(ErrorMessage)
-
-                    else:
-                        print('StopLoss order placed successfully')
-                        try:
-                            orderId = newStoplossResponse.get('id')
-                            stoplossOrderSuccess = True
-                            currentTrade.order_id = orderId
-                            
-                        except:
-                            stoplossOrderSuccess = False
-
-                        if(stoplossOrderSuccess):
-                            await sendMessagetoTelegram('StopLoss Updated to' + str(stoploss) +  ' -- Order Id ' + str(orderId) +  ' placed successfully for ' + currentTrade.stock_name)
-
-
-
-                #modificationresponse = fyers.modify_order(modifyrequest)
-
-                #await ProcessFyersModificationResponse(modificationresponse, currentTrade.stock_name, stoploss)
-
-                #print(modificationresponse)
-
-
-                #await sendMessagetoTelegram('StopLoss Modified from ' + str(initialStoploss) + ' to ' + str(stoploss) + 'for ' + currentTrade.stock_name)
-
         
-        else:
-            if(len(currentTrades) > 1):
-                printCurrentTrades()
-                return
+        try:
+            if(previousmessage != ''):
+
+                stockName = ''
+                order = await ExtractOrderInfo(previousmessage)
+                stockName = order.stock_name
+
+                currentTrade = currentTrades[stockName]
+            
             else:
                 key = list(currentTrades.keys())[0]
                 currentTrade = currentTrades[key]
-                stoplossPrices = re.findall(r'[0-9]+', currentMessage)
-                initialStoploss = currentTrade.stop_loss
-
-                if (currentMessage.lower().find('CTC'.lower()) != -1 or currentMessage.find('Cost to Cost'.lower()) != -1):
-                    stoploss = currentTrade.executedPrice
-                elif(len(stoplossPrices) > 1):
-                    stoploss = int(stoplossPrices[1])
-                    stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
-                elif(len(stoplossPrices) > 0):
-                    stoploss = int(stoplossPrices[0])
-                    stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
-                else:
-                    stoploss = initialStoploss
-
-                currentTrade.stop_loss = stoploss
-
-                if(offlineOrder == False):
-                    modifyrequest = ModifyOrderToJsonFyersRequest(currentTrade.order_id, stoploss, stoploss - 2)
-                    print(modifyrequest)
-                else:
-                    modifyrequest = ModifyOrderToJsonFyersRequest(currentTrade.order_id, limitPrice = stoploss)
+        except:
+            print('Unable to retrieve current trade')
 
 
-                cancelData = {"id":currentTrade.order_id}
-                cancelOrderResponse = fyers.cancel_order(cancelData)
+        if (currentTrade and (currentMessage.lower().find('CTC'.lower()) != -1 or currentMessage.find('Cost'.lower()) != -1)):
+                stoploss = currentTrade.executedPrice
+        elif(currentTrade and containsStopLoss(currentMessage)):
 
-                if('error'.lower() in cancelOrderResponse.get('s')):
-                    print('error_code + ' + str(cancelOrderResponse.get('code')))
-                    print('error_msg ' + cancelOrderResponse.get('message'))
-                    ErrorMessage = 'Cancel Order Response error_code is :' + str(cancelOrderResponse.get('code')) + '   and   ' + 'error message is : ' + cancelOrderResponse.get('message')
-                    await sendMessagetoTelegram(ErrorMessage)
+            stoplossPrices = re.findall(r'[0-9]+', currentMessage)
+            
+            if(len(stoplossPrices) > 1):
+                stoploss = int(stoplossPrices[1])
+                stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
+            elif(len(stoplossPrices) > 0):
+                stoploss = int(stoplossPrices[0])
+                stoploss = EvaluateStopLossPrice(stoploss, currentTrade)
 
-                else:
-                    print('Existing Stoploss order cancelled successfully')
-                    newStoplossRequest =  {
-                          "symbol": currentTrade.stock_symbol,
-                          "qty":25,
-                          "type":4,
-                          "side":-1,
-                          "productType":'INTRADAY',
-                          "limitPrice":stoploss - 2,
-                          "stopPrice":stoploss,
-                          "validity":"DAY",
-                          "disclosedQty":0,
-                          "offlineOrder":offlineOrder,
-                          "stopLoss":0,
-                          "takeProfit":0
-                        }
+        currentTrade.stop_loss = stoploss
 
-                    newStoplossResponse = fyers.place_order(newStoplossRequest)
-                    stoplossOrderSuccess = False
-
-                    if('error'.lower() in newStoplossResponse.get('s')):
-                        print('error_code + ' + str(newStoplossResponse.get('code')))
-                        print('error_msg ' + newStoplossResponse.get('message'))
-                        ErrorMessage = 'error_code is :' + str(newStoplossResponse.get('code')) + '   and   ' + 'error message is : ' + firstorderresponse.get('message')
-                        await sendMessagetoTelegram(ErrorMessage)
-
-                    else:
-                        print('StopLoss order placed successfully')
-                        try:
-                            orderId = newStoplossResponse.get('id')
-                            stoplossOrderSuccess = True
-                            currentTrade.order_id = orderId
-                            
-                        except:
-                            stoplossOrderSuccess = False
-
-                        if(stoplossOrderSuccess):
-                            await sendMessagetoTelegram('StopLoss Updated to' + str(stoploss) +  ' -- Order Id ' + str(orderId) +  ' placed successfully for ' + orderRequest.stock_name)
-
-                #print("Modify Request")
-                #print(modifyrequest)
-
-                #modificationresponse = fyers.modify_order(modifyrequest)
-
-                #await ProcessFyersModificationResponse(modificationresponse, currentTrade.stock_name, stoploss)
-        
-
-        if(currentTrade):
-            currentTrade.stop_loss = stoploss
+        await sendUpdateStoplosstoFyers(currentTrade)
 
         printCurrentTrades()
 
 
         # --- Send modify order for SL
 
-    async def ProcessFyersModificationResponse(orderresponse, stockName, stoploss):
-        modificationresponse = 'Modification Response -- ' + orderresponse.get('message')
-        if('error'.lower() in orderresponse.get('s')):
-            print('error_code + ' + str(orderresponse.get('code')))
-            print('error_msg ' + orderresponse.get('message'))
-            ErrorMessage = 'error_code is :' + str(orderresponse.get('code')) + '   and   ' + 'error message is : ' + orderresponse.get('message')
-            await sendMessagetoTelegram("Update StopLoss to " + str(stoploss) + "  for " + stockName + "\n Error  : " + ErrorMessage)
+    async def sendUpdateStoplosstoFyers(currentTrade):
+        stoplossOrderSuccess = False
+        cancelData = {"id":currentTrade.order_id}
+        cancelOrderResponse = fyers.cancel_order(cancelData)
+
+        if('error'.lower() in cancelOrderResponse.get('s')):
+            print('error_code + ' + str(cancelOrderResponse.get('code')))
+            print('error_msg ' + cancelOrderResponse.get('message'))
+            ErrorMessage = 'Cancel Order before Updating Stoploss failed \n Response error_code is :' + str(cancelOrderResponse.get('code')) + '   and   ' + 'error message is : ' + cancelOrderResponse.get('message')
+            await sendMessagetoTelegram(ErrorMessage)
 
         else:
-            print('order modified successfully')
-            try:
-                orderId = orderresponse.get('id')
-                orderRequest.order_id = orderId
-                currentTrades[orderRequest.stock_name] = orderRequest
+            print('Existing Stoploss order cancelled successfully')
+            newStoplossRequest =  {
+                    "symbol": currentTrade.stock_symbol,
+                    "qty":25,
+                    "type":4,
+                    "side":-1,
+                    "productType":'INTRADAY',
+                    "limitPrice":currentTrade.stop_loss - 2,
+                    "stopPrice":currentTrade.stop_loss,
+                    "validity":"DAY",
+                    "disclosedQty":0,
+                    "offlineOrder":offlineOrder,
+                    "stopLoss":0,
+                    "takeProfit":0
+                }
 
-                print('StopLoss Modified successfully')
-                await sendMessagetoTelegram(modificationresponse + "\n StopLoss Modified successfully")
-                #await sendMessagetoTelegram('StopLoss Modified from ' + str(initialStoploss) + ' to ' + str(stoploss) + 'for ' + currentTrade.stock_name)
-            except:
-                orderExecutedSuccessfully = False
+            newStoplossResponse = fyers.place_order(newStoplossRequest)
+            
+
+            if('error'.lower() in newStoplossResponse.get('s')):
+                print('error_code + ' + str(newStoplossResponse.get('code')))
+                print('error_msg ' + newStoplossResponse.get('message'))
+                ErrorMessage = 'Creating new Stoploss order failed \n error_code is :' + str(newStoplossResponse.get('code')) + '   and   ' + 'error message is : ' + newStoplossResponse.get('message')
+                await sendMessagetoTelegram(ErrorMessage)
+
+            else:
+                print('StopLoss order placed successfully')
+                try:
+                    orderId = newStoplossResponse.get('id')
+                    stoplossOrderSuccess = True
+                    currentTrade.order_id = orderId
+                    
+                except:
+                    stoplossOrderSuccess = False
+
+                if(stoplossOrderSuccess):
+                    await sendMessagetoTelegram('StopLoss Updated to ' + str(currentTrade.stop_loss) +  ' for ' +currentTrade.stock_name + '\n Order Id:' + str(orderId))
+
+
+    # async def ProcessFyersModificationResponse(orderresponse, stockName, stoploss):
+    #     modificationresponse = 'Modification Response -- ' + orderresponse.get('message')
+    #     if('error'.lower() in orderresponse.get('s')):
+    #         print('error_code + ' + str(orderresponse.get('code')))
+    #         print('error_msg ' + orderresponse.get('message'))
+    #         ErrorMessage = 'error_code is :' + str(orderresponse.get('code')) + '   and   ' + 'error message is : ' + orderresponse.get('message')
+    #         await sendMessagetoTelegram("Update StopLoss to " + str(stoploss) + "  for " + stockName + "\n Error  : " + ErrorMessage)
+
+    #     else:
+    #         print('order modified successfully')
+    #         try:
+    #             orderId = orderresponse.get('id')
+    #             currentTrade.order_id = orderId
+    #             currentTrades[orderRequest.stock_name] = orderRequest
+
+    #             print('StopLoss Modified successfully')
+    #             await sendMessagetoTelegram(modificationresponse + "\n StopLoss Modified successfully")
+    #             #await sendMessagetoTelegram('StopLoss Modified from ' + str(initialStoploss) + ' to ' + str(stoploss) + 'for ' + currentTrade.stock_name)
+    #         except:
+    #             orderExecutedSuccessfully = False
 
     def containsStopLoss(currentMessage):
         for stoplossPhrase in stopLossKeyWords:
