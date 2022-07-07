@@ -55,7 +55,8 @@ transactionType = ''
 suggestedEntryPrice = 0
 currentTrades = {}
 
-tradeSignalGroupName = 'Support Signals (Platinum Batch 5)'
+#tradeSignalGroupName = 'Support Signals (5 Platinum Batch 5)'
+tradeSignalGroupName = 'Trade Pops'
 tradeStatusGroupName = 'Dharamik Signals Live'
 
 messageFilter = ['Buy', 'Target']
@@ -75,12 +76,12 @@ def main():
     # session_name = environ.get('TG_SESSION', 'session')
     client = TelegramClient(username, api_id, api_hash)
 
-    fyers_app_id = "9BPNFGJHZ5-100"    
+    fyers_app_id = "W4303K7IOY-100"    
 
     print(offlineOrder)
 
-    #access_token = request_auth()
-    access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2MzM1NjY4MjQsImV4cCI6MTYzMzY1MzA0NCwibmJmIjoxNjMzNTY2ODI0LCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCaFhrQm9ERGJrbThsSjZ2S3dZSFZPODFJUVhQU1d5QzRjR1hrcmpUaC02MUJ0bXN6NUdvLVBNSENEM3RFRzFDT2RSZEl3bTV1R09DbC0tamFtd3ZzQmF0QlJfZFdSVW84ZnBNemtMUFlHR0o0Rm5Faz0iLCJkaXNwbGF5X25hbWUiOiJSQUhVTCBWQVJNQSIsImZ5X2lkIjoiWFIxMTYwMiIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.-LAGAvCuoSUsvntwDP25Bb4TAOmPPH6iJS67IqusDBk'
+    access_token = request_auth()
+    #access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhcGkuZnllcnMuaW4iLCJpYXQiOjE2MzM1NjY4MjQsImV4cCI6MTYzMzY1MzA0NCwibmJmIjoxNjMzNTY2ODI0LCJhdWQiOlsieDowIiwieDoxIiwieDoyIiwiZDoxIiwiZDoyIiwieDoxIiwieDowIl0sInN1YiI6ImFjY2Vzc190b2tlbiIsImF0X2hhc2giOiJnQUFBQUFCaFhrQm9ERGJrbThsSjZ2S3dZSFZPODFJUVhQU1d5QzRjR1hrcmpUaC02MUJ0bXN6NUdvLVBNSENEM3RFRzFDT2RSZEl3bTV1R09DbC0tamFtd3ZzQmF0QlJfZFdSVW84ZnBNemtMUFlHR0o0Rm5Faz0iLCJkaXNwbGF5X25hbWUiOiJSQUhVTCBWQVJNQSIsImZ5X2lkIjoiWFIxMTYwMiIsImFwcFR5cGUiOjEwMCwicG9hX2ZsYWciOiJOIn0.-LAGAvCuoSUsvntwDP25Bb4TAOmPPH6iJS67IqusDBk'
     print(access_token)
     
     fyers = fyersModel.FyersModel(client_id=fyers_app_id, token=access_token)
@@ -566,12 +567,12 @@ def main():
 def request_auth():
 
     options = Options()
-    options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    options.binary_location = r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
     driver = webdriver.Chrome(executable_path=r"C:\chromedriver_win32\chromedriver.exe", chrome_options = options)
 
     # Authentication
-    app_id = "9BPNFGJHZ5-100"
-    app_secret = "LJCTDO2WQY"
+    app_id = "W4303K7IOY-100"
+    app_secret = "8XA2P24NMO"
     session=accessToken.SessionModel(client_id=app_id, secret_key=app_secret, redirect_uri=redirect_url, response_type='code', grant_type='authorization_code')
     #app_session = accessToken.SessionModel(app_id, app_secret)
     #response = app_session.auth()
@@ -591,22 +592,39 @@ def request_auth():
     # Opening Url through Selenium
     driver.get(str(response))
 
-    usn = driver.find_element_by_id('fyers_id')
-    usn.send_keys('XR11602')
-    time.sleep(1)
+    usn = driver.find_element_by_id('fy_client_id')
+    usn.send_keys('XS26273')
+    time.sleep(3)
 
-    pwd = driver.find_element_by_id('password')
-    pwd.send_keys('Hubble2426!')
-    time.sleep(1)
+    driver.find_element_by_id('clientIdSubmit').click()
+    time.sleep(3)
 
-    driver.find_element_by_class_name('login-span-pan').click()
-    time.sleep(1)
+    pwd = driver.find_element_by_id('fy_client_pwd')
+    pwd.send_keys('RaviSri#1216')
+    time.sleep(3)
 
-    pan = driver.find_element_by_id('pancard')
-    pan.send_keys('AQCPV3101H')
-    time.sleep(1)
+    driver.find_element_by_id('loginSubmit').click()
+    time.sleep(3)
 
-    driver.find_element_by_id('btn_id').click()
+    # Entering 4 digit pin
+
+    pinContainer = driver.find_element_by_class_name('pin-container')
+
+    first = pinContainer.find_element_by_id('first')
+    first.send_keys('2')
+
+    second = pinContainer.find_element_by_id('second')
+    second.send_keys('7')
+
+    third = pinContainer.find_element_by_id('third')
+    third.send_keys('0')
+
+    fourth = pinContainer.find_element_by_id('fourth')
+    fourth.send_keys('2')
+
+    time.sleep(3)
+
+    driver.find_element_by_id('verifyPinSubmit').click()
 
 
     WebDriverWait(driver,20).until(EC.title_contains('tradepop'))
